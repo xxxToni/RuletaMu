@@ -1,7 +1,6 @@
 const inputOpcion = document.getElementById("input-opcion");
 const btnAgregar = document.getElementById("btn-agregar");
-const btnLimpiar = document.getElementById("btn-limpiar");
-const btnGirar = document.getElementById("btn-girar");
+const btnGirar = document.getElementById("btn-girar"); 
 const canvas = document.getElementById("ruleta");
 const ctx = canvas.getContext("2d");
 const textoMensaje = document.getElementById("mensaje");
@@ -36,7 +35,6 @@ function reproducirTick() {
     osc.stop(audioCtx.currentTime + 0.05);
 }
 
-// Empezamos en -1 para que no suene nada antes de empezar a girar
 let sectorAnterior = -1; 
 
 function monitorearGiro() {
@@ -45,11 +43,9 @@ function monitorearGiro() {
     const style = window.getComputedStyle(canvas);
     const matrix = new DOMMatrix(style.transform);
     
-    // Obtenemos los grados de rotación del canvas
     let anguloActual = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
     if (anguloActual < 0) anguloActual += 360;
     
-    // ¡LA CORRECCIÓN!: Calculamos exactamente qué está pasando debajo de la flecha (270 grados)
     let anguloPuntero = (270 - anguloActual + 360) % 360;
     
     const tamañoPorcion = 360 / opciones.length;
@@ -57,7 +53,7 @@ function monitorearGiro() {
     
     if (sectorActual !== sectorAnterior) {
         if (sectorAnterior !== -1) {
-            reproducirTick(); // Solo suena si cruzamos una línea de verdad
+            reproducirTick(); 
         }
         sectorAnterior = sectorActual;
     }
@@ -71,11 +67,59 @@ function actualizarListaNombres() {
 
     opciones.forEach((nombre, indice) => {
         const li = document.createElement("li"); 
-        li.textContent = nombre;
+        
+        const spanNombre = document.createElement("span");
+        spanNombre.textContent = nombre;
+        spanNombre.style.flex = "1"; 
+        spanNombre.style.marginRight = "10px";
+        spanNombre.style.wordBreak = "break-word";
+        spanNombre.style.cursor = "text"; 
+        spanNombre.title = "Doble clic para editar"; 
+        
+        spanNombre.addEventListener("dblclick", () => {
+            if (girando) return; 
+
+            spanNombre.style.display = "none";
+
+            const inputEdicion = document.createElement("input");
+            inputEdicion.type = "text";
+            inputEdicion.value = nombre;
+            inputEdicion.className = "input-edicion";
+
+            let editado = false;
+            const guardarEdicion = () => {
+                if (editado) return; 
+                editado = true;
+                
+                const nuevoNombre = inputEdicion.value.trim();
+                if (nuevoNombre !== "" && nuevoNombre !== nombre) {
+                    opciones[indice] = nuevoNombre;
+                    dibujarRuleta(); 
+                    textoMensaje.textContent = "Nombre actualizado";
+                    textoMensaje.style.color = "#a07bb6";
+                }
+                actualizarListaNombres(); 
+            };
+
+            inputEdicion.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") guardarEdicion();
+                if (e.key === "Escape") actualizarListaNombres(); 
+            });
+
+            inputEdicion.addEventListener("blur", guardarEdicion);
+
+            li.insertBefore(inputEdicion, cajaBotones);
+            inputEdicion.focus();
+            inputEdicion.setSelectionRange(inputEdicion.value.length, inputEdicion.value.length);
+        });
+
+        const cajaBotones = document.createElement("div");
+        cajaBotones.style.display = "flex";
 
         const btnX = document.createElement("button"); 
         btnX.textContent = "✖";
         btnX.className = "btn-eliminar-x";
+        btnX.title = "Quitar participante";
         
         btnX.addEventListener("click", () => {
             if (girando) return; 
@@ -90,11 +134,15 @@ function actualizarListaNombres() {
             dibujarRuleta(); 
             actualizarListaNombres(); 
             
-            textoMensaje.textContent = nombre + " fue quitado manualmente";
+            textoMensaje.textContent = "Eliminaste a " + nombre;
             textoMensaje.style.color = "#e74c3c";
         });
 
-        li.appendChild(btnX); 
+        cajaBotones.appendChild(btnX);
+
+        li.appendChild(spanNombre);
+        li.appendChild(cajaBotones);
+
         listaNombresUI.appendChild(li); 
     });
 }
@@ -157,21 +205,11 @@ inputOpcion.addEventListener('keydown', (evento) => {
     }
 });
 
-btnLimpiar.addEventListener('click', () => {
-    if (girando) return;
-    opciones = [];
-    dibujarRuleta();
-    actualizarListaNombres(); 
-    textoMensaje.textContent = "Agrega opciones para empezar";
-    textoMensaje.style.color = "#34495e";
-    indicePendienteEliminar = -1;
-});
-
 btnGirar.addEventListener('click', () => {
     if (girando) return; 
 
     if (opciones.length === 0) {
-        textoMensaje.textContent = "¡Agrega al menos una opción antes de girar!";
+        textoMensaje.textContent = "Agrega un nombre para iniciar";
         textoMensaje.style.color = "#e74c3c";
         return;
     }
@@ -198,7 +236,7 @@ btnGirar.addEventListener('click', () => {
     }
 
     if (opciones.length === 1) {
-        textoMensaje.textContent = "🎉 ¡Ganador definitivo: " + opciones[0] + "! 🎉";
+        textoMensaje.textContent = "EL ganador es " + opciones[0] ;
         textoMensaje.style.color = "#2ecc71";
         return;
     }
@@ -207,12 +245,9 @@ btnGirar.addEventListener('click', () => {
     textoMensaje.textContent = ""; 
     document.body.style.pointerEvents = "none";
     
-    // --- CAMBIO DE FÍSICA Y ANIMACIÓN ---
-    // Subimos el tiempo a 12 segundos y pusimos una curva que tiene un final muuuy largo
     canvas.style.transition = 'transform 12s cubic-bezier(0.25, 0.1, 0.1, 1)';
 
     const gradosExtra = Math.floor(Math.random() * 360);
-    // Subimos a 20 vueltas base (7200 grados) para compensar el tiempo extra y que vaya rápido al inicio
     const giroTotal = 7200 + gradosExtra; 
     
     gradosActuales += giroTotal;
@@ -232,12 +267,21 @@ canvas.addEventListener('transitionend', () => {
     const tamañoPorcion = 360 / cantidadOpciones;
     const indiceSeleccionado = Math.floor(anguloPuntero / tamañoPorcion);
 
-    const eliminado = opciones[indiceSeleccionado];
+    const seleccionado = opciones[indiceSeleccionado];
     
-    textoMensaje.textContent = eliminado + " fue eliminado";
-    textoMensaje.style.color = "#e74c3c";
-
-    indicePendienteEliminar = indiceSeleccionado;
+    if (cantidadOpciones === 2) {
+        textoMensaje.textContent = "El ganador es " + seleccionado ;
+        textoMensaje.style.color = "#2ecc71";
+        
+        opciones = [seleccionado];
+        actualizarListaNombres(); 
+        indicePendienteEliminar = -1; 
+        
+    } else {
+        textoMensaje.textContent = seleccionado + " fue eliminado";
+        textoMensaje.style.color = "#e74c3c";
+        indicePendienteEliminar = indiceSeleccionado;
+    }
 
     girando = false; 
     document.body.style.pointerEvents = "auto";
