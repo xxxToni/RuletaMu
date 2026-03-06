@@ -6,12 +6,14 @@ const ctx = canvas.getContext("2d");
 const textoMensaje = document.getElementById("mensaje");
 const listaNombresUI = document.getElementById("lista-nombres");
 const contadorNombres = document.getElementById("contador-nombres");
+const btnModo = document.getElementById("btn-modo"); 
 
 let opciones = []; 
 const colores = ["#3498db", "#2ecc71", "#f1c40f", "#9b59b6", "#e74c3c", "#e67e22"];
 let gradosActuales = 0;
 let girando = false; 
 let indicePendienteEliminar = -1;
+let modoEliminacion = true; 
 
 let audioCtx; 
 
@@ -139,10 +141,8 @@ function actualizarListaNombres() {
         });
 
         cajaBotones.appendChild(btnX);
-
         li.appendChild(spanNombre);
         li.appendChild(cajaBotones);
-
         listaNombresUI.appendChild(li); 
     });
 }
@@ -205,6 +205,26 @@ inputOpcion.addEventListener('keydown', (evento) => {
     }
 });
 
+btnModo.addEventListener('click', () => {
+    if (girando) return; 
+
+    modoEliminacion = !modoEliminacion; 
+    
+    if (modoEliminacion) {
+        btnModo.textContent = "Modo eliminacion";
+        btnModo.style.backgroundColor = "#9b59b6"; 
+        btnModo.style.color = "white";
+    } else {
+        btnModo.textContent = "Modo clasico";
+        btnModo.style.backgroundColor = "#f1c40f"; 
+        btnModo.style.color = "#333";
+    }
+    
+    indicePendienteEliminar = -1; 
+    textoMensaje.textContent = "Modo cambiado";
+    textoMensaje.style.color = "#34495e";
+});
+
 btnGirar.addEventListener('click', () => {
     if (girando) return; 
 
@@ -236,7 +256,7 @@ btnGirar.addEventListener('click', () => {
     }
 
     if (opciones.length === 1) {
-        textoMensaje.textContent = "EL ganador es " + opciones[0] ;
+        textoMensaje.textContent = "El ganador es " + opciones[0] ;
         textoMensaje.style.color = "#2ecc71";
         return;
     }
@@ -269,18 +289,26 @@ canvas.addEventListener('transitionend', () => {
 
     const seleccionado = opciones[indiceSeleccionado];
     
-    if (cantidadOpciones === 2) {
-        textoMensaje.textContent = "El ganador es " + seleccionado ;
+    if (!modoEliminacion) {
+        // MODO CLÁSICO: Gana el primero que cae
+        textoMensaje.textContent = "El ganador es " + seleccionado;
         textoMensaje.style.color = "#2ecc71";
-        
-        opciones = [seleccionado];
-        actualizarListaNombres(); 
         indicePendienteEliminar = -1; 
-        
     } else {
-        textoMensaje.textContent = seleccionado + " fue eliminado";
-        textoMensaje.style.color = "#e74c3c";
-        indicePendienteEliminar = indiceSeleccionado;
+        // MODO ELIMINACIÓN:
+        if (cantidadOpciones === 2) {
+            // Lógica original restaurada: El que sale seleccionado, ¡GANA!
+            textoMensaje.textContent = "El ganador es " + seleccionado;
+            textoMensaje.style.color = "#2ecc71";
+            
+            opciones = [seleccionado];
+            actualizarListaNombres(); 
+            indicePendienteEliminar = -1; 
+        } else {
+            textoMensaje.textContent = seleccionado + " fue eliminado";
+            textoMensaje.style.color = "#e74c3c";
+            indicePendienteEliminar = indiceSeleccionado;
+        }
     }
 
     girando = false; 

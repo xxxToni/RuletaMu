@@ -149,6 +149,14 @@ button {
 
 button:hover { background-color: #2980b9; }
 
+.btn-secundario {
+    background-color: #9b59b6; 
+    margin-top: 5px;
+}
+
+.btn-secundario:hover {
+    background-color: #8e44ad;
+}
 
 .contenedor-lista {
     background: white;
